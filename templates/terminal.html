@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Robin Desktop</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='xterm/xterm.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
+    <style>
+        @font-face {
+            font-family: 'ChicagoFLF';
+            src: url('https://dl.dropboxusercontent.com/s/5x8ly6yqxg8dfp9/ChicagoFLF.ttf') format('truetype');
+        }
+
+        body {
+            background-color: #666666;  /* Classic Mac OS gray */
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            font-family: 'ChicagoFLF', monospace;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Desktop Icons */
+        .desktop-icons {
+            position: fixed;
+            top: 40px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 1;
+        }
+
+        .desktop-icon {
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .desktop-icon:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .desktop-icon.selected {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .icon-image {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border: 1px solid black;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .icon-label {
+            color: white;
+            font-size: 12px;
+            text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
+            word-wrap: break-word;
+            width: 100%;
+        }
+
+        /* Classic Mac Menu Bar */
+        .menu-bar {
+            background: white;
+            height: 20px;
+            width: 100%;
+            border-bottom: 1px solid #000;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 12px;
+            z-index: 100;
+            position: relative;
+        }
+
+        .menu-bar .apple-logo {
+            margin-right: 20px;
+        }
+
+        .menu-bar .menu-item {
+            margin-right: 20px;
+        }
+
+        .menu-bar .clock {
+            margin-left: auto;
+        }
+
+        /* Window styling */
+        .window {
+            background: white;
+            width: 1800px;
+            margin: 40px auto;
+            border: 1px solid black;
+            border-radius: 5px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+            display: none;  /* Hide by default */
+        }
+
+        .window.active {
+            display: block;  /* Show when active */
+        }
+
+        .title-bar {
+            background: linear-gradient(90deg, #ffffff 50%, #d4d4d4 50%);
+            background-size: 2px 100%;
+            height: 20px;
+            border-bottom: 1px solid black;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .window-button {
+            width: 12px;
+            height: 12px;
+            border: 1px solid black;
+            border-radius: 50%;
+            background: white;
+        }
+
+        .window-title {
+            flex-grow: 1;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        #combat-terminal,
+        #adventure-terminal {
+            padding: 20px;
+            background-color: #000000;
+            position: relative;
+            overflow: hidden;
+            font-variant-ligatures: none;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+        }
+
+        /* CRT effects */
+        #combat-terminal::before,
+        #adventure-terminal::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        #combat-terminal::after,
+        #adventure-terminal::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                circle at center,
+                rgba(0,0,0,0) 0%,
+                rgba(0,0,0,0.1) 90%
+            );
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        @media (max-width: 1900px) {
+            .window {
+                width: 75vw;
+                margin: 25px auto;
+            }
+            .desktop-icons {
+                right: 10px;
+            }
+        }
+
+        /* Startup animation */
+        @keyframes startup {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .window {
+            animation: startup 0.5s ease-out;
+        }
+
+        /* Subtle screen flicker */
+        @keyframes flicker {
+            0% { opacity: 0.99; }
+            100% { opacity: 1; }
+        }
+
+        #combat-terminal,
+        #adventure-terminal {
+            animation: flicker 0.1s infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Classic Mac Menu Bar -->
+    <div class="menu-bar">
+        <span class="apple-logo">🍎</span>
+        <span class="menu-item">File</span>
+        <span class="menu-item">Edit</span>
+        <span class="menu-item">View</span>
+        <span class="menu-item">Special</span>
+        <span class="clock" id="clock"></span>
+    </div>
+
+    <!-- Desktop Icons -->
+    <div class="desktop-icons">
+        <div class="desktop-icon" onclick="launchGame('combat')" id="combat-icon">
+            <div class="icon-image">⚔️</div>
+            <div class="icon-label">Office Combat</div>
+        </div>
+        <div class="desktop-icon" onclick="launchGame('adventure')" id="adventure-icon">
+            <div class="icon-image">🗺️</div>
+            <div class="icon-label">Robin Adventure</div>
+        </div>
+    </div>
+
+    <!-- Terminal Windows -->
+    <div class="window" id="combat-window">
+        <div class="title-bar">
+            <div class="window-controls">
+                <div class="window-button" onclick="closeWindow('combat')"></div>
+                <div class="window-button"></div>
+            </div>
+            <div class="window-title">Office Combat</div>
+        </div>
+        <div id="combat-terminal"></div>
+    </div>
+
+    <div class="window" id="adventure-window">
+        <div class="title-bar">
+            <div class="window-controls">
+                <div class="window-button" onclick="closeWindow('adventure')"></div>
+                <div class="window-button"></div>
+            </div>
+            <div class="window-title">Robin Adventure</div>
+        </div>
+        <div id="adventure-terminal"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='xterm/xterm.js') }}"></script>
+    <script src="{{ url_for('static', filename='socket.io/socket.io.js') }}"></script>
+    <script>
+        // Update clock
+        function updateClock() {
+            const now = new Date();
+            const time = now.toLocaleTimeString('en-US', { 
+                hour: 'numeric', 
+                minute: '2-digit',
+                hour12: true 
+            });
+            document.getElementById('clock').textContent = time;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Play startup sound
+        const startupSound = new Audio('https://dl.dropboxusercontent.com/s/5wqxz5674fh4ugd/MacStartup.mp3');
+        startupSound.play().catch(e => console.log('Audio playback prevented'));
+
+        // Terminal instances
+        const terminals = {
+            combat: new Terminal({
+                cursorBlink: true,
+                fontSize: 14,
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                theme: {
+                    background: '#000000',
+                    foreground: '#33ff33',
+                    cursor: '#33ff33',
+                    cursorAccent: '#000000'
+                },
+                cols: 180,
+                rows: 40,
+                convertEol: true,
+                rendererType: 'canvas',
+                allowTransparency: false,
+                disableStdin: false,
+                fontWeight: 400,
+                fontWeightBold: 700,
+                letterSpacing: 0,
+                lineHeight: 1,
+                scrollback: 1000,
+                tabStopWidth: 8
+            }),
+            adventure: new Terminal({
+                cursorBlink: true,
+                fontSize: 14,
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                theme: {
+                    background: '#000000',
+                    foreground: '#33ff33',
+                    cursor: '#33ff33',
+                    cursorAccent: '#000000'
+                },
+                cols: 180,
+                rows: 40,
+                convertEol: true,
+                rendererType: 'canvas',
+                allowTransparency: false,
+                disableStdin: false,
+                fontWeight: 400,
+                fontWeightBold: 700,
+                letterSpacing: 0,
+                lineHeight: 1,
+                scrollback: 1000,
+                tabStopWidth: 8
+            })
+        };
+
+        // Socket instances
+        const sockets = {
+            combat: null,
+            adventure: null
+        };
+
+        // Input state
+        const inputState = {
+            combat: { buffer: '', waiting: false },
+            adventure: { buffer: '', waiting: false }
+        };
+
+        // Initialize terminals
+        terminals.combat.open(document.getElementById('combat-terminal'));
+        terminals.adventure.open(document.getElementById('adventure-terminal'));
+
+        function launchGame(game) {
+            // Deselect all icons
+            document.querySelectorAll('.desktop-icon').forEach(icon => {
+                icon.classList.remove('selected');
+            });
+            
+            // Select clicked icon
+            document.getElementById(`${game}-icon`).classList.add('selected');
+
+            // Show window
+            document.getElementById(`${game}-window`).classList.add('active');
+
+            // Connect if not already connected
+            if (!sockets[game]) {
+                connectGame(game);
+            }
+
+            // Focus terminal
+            terminals[game].focus();
+        }
+
+        function closeWindow(game) {
+            // Hide window
+            document.getElementById(`${game}-window`).classList.remove('active');
+            
+            // Deselect icon
+            document.getElementById(`${game}-icon`).classList.remove('selected');
+
+            // Disconnect socket
+            if (sockets[game]) {
+                sockets[game].disconnect();
+                sockets[game] = null;
+            }
+        }
+
+        function connectGame(game) {
+            const socket = io({
+                'reconnection': false,
+                query: { game: game }
+            });
+
+            socket.on('connect', () => {
+                console.log(`Connected to ${game}`);
+                socket.emit('start_game', { game: game });
+            });
+
+            socket.on('disconnect', () => {
+                console.log(`Disconnected from ${game}`);
+                inputState[game].waiting = false;
+                terminals[game].write('\r\n\nConnection lost. Please refresh the page to start a new game.\r\n');
+                sockets[game] = null;
+            });
+
+            socket.on('terminal_output', (data) => {
+                terminals[game].write(data.data);
+            });
+
+            socket.on('terminal_command', (data) => {
+                if (data.command === 'clear') {
+                    terminals[game].clear();
+                    terminals[game].reset();
+                }
+            });
+
+            socket.on('request_input', () => {
+                inputState[game].waiting = true;
+            });
+
+            terminals[game].onData(e => {
+                if (!inputState[game].waiting || !socket.connected) return;
+
+                if (e === '\r') { // Enter key
+                    inputState[game].waiting = false;
+                    terminals[game].write('\r\n');
+                    socket.emit('user_input', { input: inputState[game].buffer });
+                    inputState[game].buffer = '';
+                } else if (e === '\x7f') { // Backspace
+                    if (inputState[game].buffer.length > 0) {
+                        inputState[game].buffer = inputState[game].buffer.slice(0, -1);
+                        terminals[game].write('\b \b');
+                    }
+                } else {
+                    inputState[game].buffer += e;
+                    terminals[game].write(e);
+                }
+            });
+
+            sockets[game] = socket;
+        }
+
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            Object.values(sockets).forEach(socket => {
+                if (socket && socket.connected) {
+                    socket.disconnect();
+                }
+            });
+        });
+
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                Object.values(sockets).forEach(socket => {
+                    if (socket && socket.connected) {
+                        socket.disconnect();
+                    }
+                });
+            }
+        });
+
+        // Double-click handling for icons
+        let lastClickTime = 0;
+        document.querySelectorAll('.desktop-icon').forEach(icon => {
+            icon.addEventListener('click', (e) => {
+                const currentTime = new Date().getTime();
+                const timeDiff = currentTime - lastClickTime;
+                lastClickTime = currentTime;
+
+                // Simulate double-click with 500ms threshold
+                if (timeDiff < 500) {
+                    const game = icon.id.replace('-icon', '');
+                    launchGame(game);
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

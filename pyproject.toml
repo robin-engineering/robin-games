@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "robin-adventure"
+version = "0.1.0"
+description = "A text-based adventure game showcasing Robin's workplace platform features"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+flask = "^2.0.1"
+flask-socketio = "^5.1.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+black = "^23.3.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+robin-adventure = "robin_adventure:start_game"
+robin-combat = "office_combat:start_combat_game" 
