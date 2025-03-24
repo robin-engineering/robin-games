@@ -138,8 +138,11 @@ def select_player_action(player, enemy):
         print("4. Rest (Recover Energy)")
 
     max_choice = 5 if player.has_magic else 4
-    choice = input(f"\nEnter your choice (1-{max_choice}): ")
-
+    choice = input(f"\nEnter your choice (1-{max_choice}: ")
+    
+    if check_reset(choice):
+        return None  # Return None to indicate reset triggered
+    
     if choice == "1":
         if player.energy >= 20:
             attacks = [
@@ -150,7 +153,13 @@ def select_player_action(player, enemy):
                 {"name": "`Workplace Analytics Wave`", "damage": random.randint(25, 35) + player.base_damage, 
                  "description": "You bombard chaos with data-driven insights!"},
                 {"name": "`Meeting Room Manager`", "damage": random.randint(18, 28) + player.base_damage, 
-                 "description": "You coordinate all meeting spaces with ruthless efficiency!"}
+                 "description": "You coordinate all meeting spaces with ruthless efficiency!"},
+                {"name": "`Office Announcement System`", "damage": random.randint(22, 32) + player.base_damage, 
+                 "description": "You blast critical announcements to keep everyone perfectly informed!"},
+                {"name": "`Experience Survey Analysis`", "damage": random.randint(24, 34) + player.base_damage, 
+                 "description": "You implement targeted improvements based on employee feedback!"},
+                {"name": "`Delivery Management Dashboard`", "damage": random.randint(20, 30) + player.base_damage, 
+                 "description": "You organize and track all office deliveries with pinpoint accuracy!"}
             ]
             
             attack = random.choice(attacks)
@@ -175,7 +184,13 @@ def select_player_action(player, enemy):
                 {"name": "Paper Calendar", "damage": random.randint(5, 8) + (player.base_damage // 3), 
                  "description": "You flip through a paper calendar looking for conflicts!"},
                 {"name": "Whiteboard Diagram", "damage": random.randint(6, 10) + (player.base_damage // 3), 
-                 "description": "You draw a complicated seating chart on the whiteboard!"}
+                 "description": "You draw a complicated seating chart on the whiteboard!"},
+                {"name": "Office-wide Email Blast", "damage": random.randint(4, 8) + (player.base_damage // 3), 
+                 "description": "You send a mass email that most employees ignore or miss!"},
+                {"name": "Paper Survey Forms", "damage": random.randint(5, 9) + (player.base_damage // 3), 
+                 "description": "You distribute paper surveys that few employees complete!"},
+                {"name": "Delivery Clipboard", "damage": random.randint(3, 7) + (player.base_damage // 3), 
+                 "description": "You track deliveries with a clipboard that keeps getting misplaced!"}
             ]
             
             attack = random.choice(attacks)
@@ -248,7 +263,7 @@ def select_player_action(player, enemy):
         if player.mana >= 30:
             spells = [
                 {"name": "`Automatic Desk Booking`", "damage": random.randint(30, 45), "mana_cost": random.randint(10, 15),
-                 "description": "Your users are automatically assigned the desks they want!"},
+                 "description": "Your users are automatically given the desks they want!"},
                 {"name": "`Talk to your Data`", "damage": random.randint(35, 50), "mana_cost": random.randint(14, 20),
                  "description": "You use an intuitive chat interface to get actionable insights!"},
                 {"name": "`Smart Space Suggestions`", "damage": random.randint(40, 55), "mana_cost": random.randint(10, 22),
@@ -380,6 +395,10 @@ def combat_round(player, enemy, allies=None, enemies_defeated=0):
     # Get player's intended action
     action_type, description, name, damage, energy_cost = select_player_action(player, enemy)
     
+    # Check if reset was triggered
+    if action_type is None:
+        return None
+    
     # Enemy's turn
     enemy_damage = enemy_turn(enemy)
     player.hp -= enemy_damage
@@ -423,8 +442,10 @@ def combat_round(player, enemy, allies=None, enemies_defeated=0):
     
     time.sleep(1)
     # Wait for any key press to continue
-    type_text("\nPress Enter to continue...")
-    input().strip()  # Strip whitespace from input
+    type_text("\nPress Enter to continue (or type 'reset' to restart)...")
+    choice = input().strip().lower()
+    if check_reset(choice):
+        return None
     return False
 
 def create_enemy(enemies_defeated):
@@ -510,12 +531,21 @@ def print_combat_title():
     print(title)
     time.sleep(1)  # Pause for dramatic effect
 
+def check_reset(user_input):
+    """Check if the user wants to reset the game"""
+    if user_input.lower() == "reset":
+        clear_screen()
+        start_combat_game()
+        return True
+    return False
+
 def start_combat_game():
     """Main game loop"""
     print_combat_title()
     type_text(f"{PURPLE}Welcome to ROBIN: OFFICE WARRIOR!{RESET}")
     type_text("You've entered a parallel universe where office inefficiencies have come to life!")
     type_text("Armed with Robin's workplace platform, you must restore order to the chaos.")
+    type_text("\nAt any time, type 'reset' to restart the game.")
     
     player = Player()
     enemies_defeated = 0
@@ -524,11 +554,16 @@ def start_combat_game():
     while player.hp > 0:
         enemy = create_enemy(enemies_defeated)
         type_text(f"\nA wild {enemy.name} appears!")
-        type_text("\nPress Enter to begin combat...")
-        input().strip()  # Strip whitespace from input
+        type_text("\nPress Enter to begin combat (or type 'reset' to restart)...")
+        choice = input().strip().lower()
+        if check_reset(choice):
+            return
         
         while True:
-            if combat_round(player, enemy, allies, enemies_defeated):
+            combat_result = combat_round(player, enemy, allies, enemies_defeated)
+            if combat_result is None:  # Reset was triggered
+                return
+            elif combat_result:  # Victory
                 enemies_defeated += 1
                 
                 # Add a new ally after each victory
@@ -567,7 +602,12 @@ def start_combat_game():
                 print(f"\n{PURPLE}But your efforts were not in vain:{RESET}")
                 type_text(f"You defeated {GREEN}{enemies_defeated}{RESET} office inefficiencies!")
                 print("="*80)
-                return
+                type_text("\nType 'reset' to play again or press Enter to exit...")
+                choice = input().strip().lower()
+                if check_reset(choice):
+                    return
+                else:
+                    return
         
         if enemies_defeated % 2 == 0:
             type_text(f"\n{GREEN}Level Up!{RESET}")
@@ -586,9 +626,11 @@ def start_combat_game():
             for ally in allies:
                 ally.base_damage += 5
         
-        type_text("\nContinue fighting? (y/n): ")
+        type_text("\nContinue fighting? (y/n/reset): ")
         choice = input().strip().lower()
-        if choice != 'y':
+        if check_reset(choice):
+            return
+        elif choice != 'y':
             type_text(f"\nYou defeated {enemies_defeated} office inefficiencies!")
             type_text("Thanks for playing ROBIN: OFFICE WARRIOR!")
             return

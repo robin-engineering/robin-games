@@ -16,6 +16,14 @@ def clear_screen():
     else:
         os.system('clear')
 
+def check_reset(user_input):
+    """Check if the user wants to reset the game"""
+    if user_input.lower() == "reset":
+        clear_screen()
+        start_game()
+        return True
+    return False
+
 def type_text(text, delay=0.01):
     """Print text with a typewriter effect"""
     for char in text:
@@ -70,10 +78,13 @@ def start_game():
     type_text("First, choose your role:")
     type_text("\n1. Employee - Experience how Robin can help you navigate the workplace")
     type_text("2. Office Administrator - See how Robin can help manage the workplace")
+    type_text("\nAt any time, type 'reset' to restart the game.")
     
     choice = input("\nSelect your role (1/2): ")
     
-    if choice == "1":
+    if check_reset(choice):
+        return
+    elif choice == "1":
         start_employee_path()
     elif choice == "2":
         start_admin_path()
@@ -122,9 +133,11 @@ def start_admin_path():
     type_text("1. Using Robin's powerful workplace platform")
     type_text("2. Trying to coordinate everything manually")
     
-    choice = input("\nSelect your experience (1/2): ")
+    choice = input("\nSelect your experience (1/2, or type 'reset' to restart): ")
     
-    if choice == "1":
+    if check_reset(choice):
+        return
+    elif choice == "1":
         admin_first_choice()
     elif choice == "2":
         admin_without_robin()
@@ -140,9 +153,11 @@ def admin_first_choice():
     type_text("2. Configure desk and room booking policies")
     type_text("3. Manage visitor access and scheduling")
     
-    choice = input("\nWhat would you like to do? (1/2/3): ")
+    choice = input("\nWhat would you like to do? (1/2/3, or type 'reset' to restart): ")
     
-    if choice == "1":
+    if check_reset(choice):
+        return
+    elif choice == "1":
         admin_analytics()
     elif choice == "2":
         admin_policies()
@@ -300,9 +315,11 @@ def choose_universe():
     type_text("1. Use Robin to plan your workday")
     type_text("2. Try to navigate the office without Robin")
     
-    choice = input("\nWhat would you like to do? (1/2): ")
+    choice = input("\nWhat would you like to do? (1/2, or type 'reset' to restart): ")
     
-    if choice == "1":
+    if check_reset(choice):
+        return
+    elif choice == "1":
         first_choice_with_robin()
     elif choice == "2":
         first_choice_without_robin()
@@ -318,9 +335,11 @@ def first_choice_with_robin():
     type_text("2. See which teammates will be in")
     type_text("3. View available desks near your team")
     
-    choice = input("\nWhat would you like to do? (1/2/3): ")
+    choice = input("\nWhat would you like to do? (1/2/3, or type 'reset' to restart): ")
     
-    if choice == "1":
+    if check_reset(choice):
+        return
+    elif choice == "1":
         check_occupancy()
     elif choice == "2":
         check_teammates()
@@ -453,7 +472,9 @@ def first_choice_without_robin():
     
     choice = input("\nWhat would you like to do? (1/2/3): ")
     
-    if choice == "1":
+    if check_reset(choice):
+        return
+    elif choice == "1":
         type_text("\nYou arrive at the office with no advance planning...")
         desk_without_robin()
     elif choice == "2":
@@ -578,8 +599,10 @@ def office_feedback():
     play_again()
 
 def play_again():
-    choice = input("\nWould you like to play again? (y/n): ")
-    if choice.lower() == 'y':
+    choice = input("\nWould you like to play again? (y/n, or type 'reset' to restart now): ")
+    if check_reset(choice):
+        return
+    elif choice.lower() == 'y':
         print_separator()
         start_game()
     elif choice.lower() == 'n':
